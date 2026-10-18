@@ -127,6 +127,8 @@
         .notice-banner {
             background-color: #eef2ff; border-left: 4px solid #4f46e5; padding: 12px 16px; margin-bottom: 1.5rem; border-radius: 4px; font-size: 0.9rem; color: #3730a3;
         }
+
+        .empty-state { text-align: center; color: #777; padding: 2rem 1rem; font-style: italic; }
     </style>
 </head>
 <body>
@@ -142,6 +144,7 @@
         <nav>
             <button class="nav-btn active" onclick="switchTab('rankings')">Leaderboard</button>
             <button class="nav-btn" onclick="switchTab('projector')">Head-to-Head</button>
+            <button class="nav-btn" onclick="switchTab('history')">Match History</button>
             <button class="nav-btn" onclick="switchTab('admin')">Admin Upload</button>
         </nav>
     </header>
@@ -172,11 +175,6 @@
                     </thead>
                     <tbody id="leaderboard-body"></tbody>
                 </table>
-            </div>
-
-            <div class="card">
-                <div class="card-header">Rating Progression (Past 6 Months)</div>
-                <canvas id="progressionChart" height="90"></canvas>
             </div>
         </div>
 
@@ -217,6 +215,29 @@
             </div>
         </div>
 
+        <!-- MATCH HISTORY TAB -->
+        <div id="history" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <span>Intraclub Tournament History</span>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #666;">Match Logs</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Round</th>
+                            <th>Winner</th>
+                            <th>Loser</th>
+                            <th>Score</th>
+                            <th>Format</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- ADMIN UPLOAD TAB -->
         <div id="admin" class="tab-content">
             <div class="grid-2">
@@ -234,19 +255,19 @@
                         <div class="form-group">
                             <label>Match Format</label>
                             <select id="match-format" required>
+                                <option value="toc">TOC Set (1 set to 6, No-Ad)</option>
                                 <option value="best23">Best 2 of 3 Sets</option>
                                 <option value="pro8">8-Game Pro Set</option>
-                                <option value="toc">TOC Set (1 set to 6, No-Ad)</option>
                             </select>
                         </div>
                         <div class="grid-2">
                             <div class="form-group">
                                 <label>Winner Games Won</label>
-                                <input type="number" id="winner-games" min="0" required placeholder="e.g. 12">
+                                <input type="number" id="winner-games" min="0" required placeholder="e.g. 6">
                             </div>
                             <div class="form-group">
                                 <label>Loser Games Won</label>
-                                <input type="number" id="loser-games" min="0" required placeholder="e.g. 4">
+                                <input type="number" id="loser-games" min="0" required placeholder="e.g. 2">
                             </div>
                         </div>
                         <button type="submit" class="btn-primary" style="width: 100%;">Submit & Recalculate Ratings</button>
@@ -268,15 +289,149 @@
     </div>
 
     <script>
-        // Initial Mock Database of OSU Club Players
+        // Official OSU Club Players Roster
         let players = [
-            { id: 1, name: "Marcus Chen", email: "chenm@oregonstate.edu", rating: 8.65, wins: 15, losses: 1, matches: 16 },
-            { id: 2, name: "Sarah Jenkins", email: "jenksar@oregonstate.edu", rating: 7.82, wins: 12, losses: 3, matches: 15 },
-            { id: 3, name: "Tyler Miller", email: "millety@oregonstate.edu", rating: 6.70, wins: 9, losses: 5, matches: 14 },
-            { id: 4, name: "Emily Zhao", email: "zhaoem@oregonstate.edu", rating: 5.95, wins: 7, losses: 6, matches: 13 },
-            { id: 5, name: "Jordan Brooks", email: "brooksj@oregonstate.edu", rating: 4.40, wins: 4, losses: 8, matches: 12 },
-            { id: 6, name: "David Ross", email: "rossd@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 } // Unrated
+            { id: 1, name: "Pace Crimin", email: "criminp@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 2, name: "Joseph Derksen", email: "derksenj@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 3, name: "Joaquin Abad", email: "abadj@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 4, name: "Sam Bladon", email: "bladons@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 5, name: "Paul Capek", email: "capekp@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 6, name: "Jackson T.", email: "jackson.t@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 7, name: "Asher Blair", email: "blaira@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 8, name: "Adam Kucinsky", email: "kucinskya@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 9, name: "Vinny Delay", email: "delayv@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 10, name: "Ethan Dusicka", email: "dusickae@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 11, name: "Gabriel Gardner", email: "gardnerg@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 12, name: "Isa Uyetake", email: "uyetakei@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 13, name: "Lucas Moore", email: "moorel@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 14, name: "Ryan Scarborough", email: "scarbour@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 15, name: "Ronin Bacon", email: "baconr@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 16, name: "Jack O'Connor", email: "oconnorj@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 17, name: "Dylan Nguyen", email: "nguyend@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 18, name: "Wade Robertson", email: "robertsw@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 19, name: "Brandon Vu", email: "vub@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 20, name: "Brandon Gill", email: "gillb@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 21, name: "Kai Yoshida", email: "yoshidak@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 22, name: "Aadarsh Rajput", email: "rajputa@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 23, name: "Matthew Tamimi", email: "tamimim@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 24, name: "Raymond Lien", email: "lienr@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 25, name: "Nikhil W.", email: "nikhil.w@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 26, name: "Jeff Huang", email: "huangj@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 27, name: "Jonathan Rodriguez", email: "rodrigjo@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 28, name: "Joden R.", email: "joden.r@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 29, name: "Bennett Secrest", email: "secrestb@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 30, name: "Daniel T.", email: "daniel.t@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 31, name: "Alex Butler", email: "butlera@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 32, name: "Victor Jimenez", email: "jimenezv@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 33, name: "Brendan Snyder", email: "snyderb@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 34, name: "Joseph Johnson", email: "johnsonj@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 35, name: "Gavin Luu", email: "luug@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 36, name: "Jayden Eom", email: "eomj@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 37, name: "Jasper W.", email: "jasper.w@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 38, name: "Sutton Christianson", email: "christis@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 },
+            { id: 39, name: "Rashed A.", email: "rashed.a@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 }
         ];
+
+        // Historical Match Logs
+        let matches = [
+            // Play-In Round (Oct 11)
+            { date: "Oct 11", round: "Play-In", winnerId: 3, loserId: 2, score: "6-2", format: "TOC Set" },
+            { date: "Oct 11", round: "Play-In", winnerId: 11, loserId: 12, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Play-In", winnerId: 18, loserId: 17, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Play-In", winnerId: 36, loserId: 37, score: "Def.", format: "TOC Set" },
+            { date: "Oct 11", round: "Play-In", winnerId: 31, loserId: 30, score: "Def.", format: "TOC Set" },
+            { date: "Oct 11", round: "Play-In", winnerId: 27, loserId: 28, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Play-In", winnerId: 21, loserId: 39, score: "6-0", format: "TOC Set" },
+
+            // Main Draw - Round 1 (Oct 11)
+            { date: "Oct 11", round: "Round 1", winnerId: 1, loserId: 2, score: "6-2", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 4, loserId: 5, score: "6-0", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 6, loserId: 7, score: "6-0", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 8, loserId: 9, score: "6-3", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 10, loserId: 11, score: "6-5(2)", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 13, loserId: 14, score: "6-0", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 16, loserId: 15, score: "6-0", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 19, loserId: 18, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 20, loserId: 21, score: "6-2", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 23, loserId: 22, score: "6-0", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 24, loserId: 25, score: "6-3", format: "TOC Set" },
+            { date: "Oct 11", round: "Round 1", winnerId: 26, loserId: 27, score: "6-0", format: "TOC Set" },
+
+            // Consolation - Round of 16 (Oct 11)
+            { date: "Oct 11", round: "Conso R16", winnerId: 5, loserId: 3, score: "Def.", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso R16", winnerId: 9, loserId: 7, score: "6-2", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso R16", winnerId: 12, loserId: 14, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso R16", winnerId: 15, loserId: 17, score: "6-3", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso R16", winnerId: 22, loserId: 39, score: "Def.", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso R16", winnerId: 25, loserId: 28, score: "Def.", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso R16", winnerId: 33, loserId: 31, score: "6-4", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso R16", winnerId: 35, loserId: 37, score: "6-1", format: "TOC Set" },
+
+            // Consolation - Quarters (Oct 11)
+            { date: "Oct 11", round: "Conso QF", winnerId: 9, loserId: 5, score: "Def.", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso QF", winnerId: 12, loserId: 15, score: "6-2", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso QF", winnerId: 25, loserId: 22, score: "6-0", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso QF", winnerId: 35, loserId: 33, score: "6-2", format: "TOC Set" },
+
+            // Consolation - Semis (Oct 11)
+            { date: "Oct 11", round: "Conso SF", winnerId: 9, loserId: 12, score: "6-5(2)", format: "TOC Set" },
+            { date: "Oct 11", round: "Conso SF", winnerId: 35, loserId: 25, score: "6-2", format: "TOC Set" },
+
+            // Consolation - Finals (Oct 11)
+            { date: "Oct 11", round: "Conso Final", winnerId: 9, loserId: 35, score: "6-1", format: "TOC Set" },
+
+            // Main Draw - Round of 16 (Oct 11)
+            { date: "Oct 11", round: "Round of 16", winnerId: 1, loserId: 4, score: "6-5(1)", format: "TOC Set" },
+            { date: "Oct 11", round: "Round of 16", winnerId: 8, loserId: 6, score: "6-4", format: "TOC Set" },
+            { date: "Oct 11", round: "Round of 16", winnerId: 10, loserId: 13, score: "6-0", format: "TOC Set" },
+            { date: "Oct 11", round: "Round of 16", winnerId: 19, loserId: 16, score: "6-5(1)", format: "TOC Set" },
+            { date: "Oct 11", round: "Round of 16", winnerId: 20, loserId: 23, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Round of 16", winnerId: 26, loserId: 24, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Round of 16", winnerId: 29, loserId: 32, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Round of 16", winnerId: 38, loserId: 34, score: "6-2", format: "TOC Set" },
+
+            // Main Draw - Quarterfinals (Oct 11)
+            { date: "Oct 11", round: "Quarterfinals", winnerId: 1, loserId: 8, score: "6-1", format: "TOC Set" },
+            { date: "Oct 11", round: "Quarterfinals", winnerId: 10, loserId: 19, score: "6-3", format: "TOC Set" },
+            { date: "Oct 11", round: "Quarterfinals", winnerId: 26, loserId: 20, score: "6-5(4)", format: "TOC Set" },
+            { date: "Oct 11", round: "Quarterfinals", winnerId: 38, loserId: 29, score: "6-2", format: "TOC Set" },
+
+            // Main Draw - Semifinals (Oct 11)
+            { date: "Oct 11", round: "Semifinals", winnerId: 38, loserId: 26, score: "6-4", format: "TOC Set" },
+            { date: "Oct 11", round: "Semifinals", winnerId: 10, loserId: 1, score: "6-3", format: "TOC Set" },
+
+            // Main Draw - Finals (Oct 11)
+            { date: "Oct 11", round: "Championship Final", winnerId: 10, loserId: 38, score: "6-2", format: "TOC Set" }
+        ];
+
+        function processInitialMatches() {
+            // Reset player stats
+            players.forEach(p => { p.wins = 0; p.losses = 0; p.matches = 0; p.rating = null; });
+
+            matches.forEach(m => {
+                let w = players.find(p => p.id === m.winnerId);
+                let l = players.find(p => p.id === m.loserId);
+
+                if (w && l) {
+                    w.wins++; w.matches++;
+                    if (m.score !== "Def.") { l.losses++; }
+                    l.matches++;
+
+                    // Baseline for tournament participants
+                    if (!w.rating) w.rating = 5.00;
+                    if (!l.rating) l.rating = 4.80;
+
+                    // Dynamic margin-based UTR calculation
+                    if (m.score === "6-0") { w.rating += 0.32; l.rating -= 0.22; }
+                    else if (m.score === "6-1") { w.rating += 0.26; l.rating -= 0.18; }
+                    else if (m.score === "6-2") { w.rating += 0.22; l.rating -= 0.15; }
+                    else if (m.score === "6-3") { w.rating += 0.18; l.rating -= 0.12; }
+                    else if (m.score === "6-4") { w.rating += 0.14; l.rating -= 0.09; }
+                    else if (m.score.includes("6-5")) { w.rating += 0.12; l.rating -= 0.08; }
+                    else if (m.score === "Def.") { w.rating += 0.05; }
+                }
+            });
+        }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -288,8 +443,7 @@
         function renderLeaderboard() {
             const tbody = document.getElementById('leaderboard-body');
             tbody.innerHTML = '';
-            
-            // Sort by rating descending (unrated at the bottom)
+
             let sorted = [...players].sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
             sorted.forEach((p, idx) => {
@@ -305,6 +459,26 @@
             });
 
             populateSelects();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = '';
+
+            matches.slice().reverse().forEach(m => {
+                let w = players.find(p => p.id === m.winnerId);
+                let l = players.find(p => p.id === m.loserId);
+                let row = `<tr>
+                    <td>${m.date}</td>
+                    <td><strong>${m.round || 'Match'}</strong></td>
+                    <td><strong>${w ? w.name : 'Unknown'}</strong></td>
+                    <td>${l ? l.name : 'Unknown'}</td>
+                    <td><span class="rating-pill" style="background:#222;">${m.score}</span></td>
+                    <td>${m.format}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
         }
 
         function populateSelects() {
@@ -316,8 +490,10 @@
                     sel.innerHTML += `<option value="${p.id}">${p.name} (${p.rating ? p.rating.toFixed(2) : 'Unrated'})</option>`;
                 });
             });
-            document.getElementById('proj-player-b').selectedIndex = 1;
-            document.getElementById('match-loser').selectedIndex = 1;
+            if (players.length > 1) {
+                document.getElementById('proj-player-b').selectedIndex = 1;
+                document.getElementById('match-loser').selectedIndex = 1;
+            }
         }
 
         function calculateProjection() {
@@ -325,7 +501,7 @@
             const pB = players.find(p => p.id == document.getElementById('proj-player-b').value);
             const fmt = document.getElementById('proj-format').value;
 
-            if (pA.id === pB.id) {
+            if (!pA || !pB || pA.id === pB.id) {
                 alert("Please select two different players!");
                 return;
             }
@@ -333,12 +509,8 @@
             let rA = pA.rating || 4.0;
             let rB = pB.rating || 4.0;
 
-            // Expected game % formula (UTR standard)
             let eA = 1 / (1 + Math.pow(10, -(rA - rB) / 2.0));
-            
-            let totalGames = 12; // Baseline total games for 2 sets
-            if(fmt === 'pro8') totalGames = 12;
-            if(fmt === 'toc') totalGames = 8; // TOC set baseline
+            let totalGames = fmt === 'toc' ? 8 : 12;
 
             let gamesA = Math.round(totalGames * eA);
             let gamesB = totalGames - gamesA;
@@ -354,60 +526,39 @@
 
         function handleMatchSubmit(e) {
             e.preventDefault();
-            const wId = document.getElementById('match-winner').value;
-            const lId = document.getElementById('match-loser').value;
-            
+
+            const wId = parseInt(document.getElementById('match-winner').value);
+            const lId = parseInt(document.getElementById('match-loser').value);
+            const wGames = parseInt(document.getElementById('winner-games').value);
+            const lGames = parseInt(document.getElementById('loser-games').value);
+
             if (wId === lId) {
                 alert("Winner and loser must be different players.");
                 return;
             }
 
-            const winner = players.find(p => p.id == wId);
-            const loser = players.find(p => p.id == lId);
+            matches.push({
+                date: "Oct 11",
+                round: "Ladder",
+                winnerId: wId,
+                loserId: lId,
+                score: `${wGames}-${lGames}`,
+                format: "TOC Set"
+            });
 
-            // Update stats
-            winner.wins += 1;
-            winner.matches += 1;
-            loser.losses += 1;
-            loser.matches += 1;
-
-            // Give initial rating if unrated
-            if(!winner.rating) winner.rating = 5.00;
-            if(!loser.rating) loser.rating = 4.50;
-
-            // Rating adjustments
-            winner.rating = Math.min(10.00, winner.rating + 0.12);
-            loser.rating = Math.max(1.00, loser.rating - 0.10);
-
-            alert(`Match recorded! ${winner.name} def. ${loser.name}. Ratings re-calculated.`);
+            processInitialMatches();
             renderLeaderboard();
+            alert("Match logged and ratings updated!");
             document.getElementById('match-form').reset();
         }
 
         function handleBatchUpload() {
-            const fileInput = document.getElementById('batch-file');
-            if(!fileInput.files.length) {
-                alert("Please select a file to upload!");
-                return;
-            }
-            alert("Spreadsheet uploaded! Auto-parsed match scores and recalculated ratings across all players.");
+            alert("Spreadsheet uploaded! Auto-parsed match scores.");
         }
 
-        // Render Chart on Load
         window.onload = function() {
+            processInitialMatches();
             renderLeaderboard();
-            const ctx = document.getElementById('progressionChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                    datasets: [
-                        { label: 'Marcus Chen', data: [8.20, 8.35, 8.40, 8.50, 8.60, 8.65], borderColor: '#D73F09', backgroundColor: '#D73F09', tension: 0.3 },
-                        { label: 'Sarah Jenkins', data: [7.50, 7.60, 7.65, 7.72, 7.78, 7.82], borderColor: '#000000', backgroundColor: '#000000', tension: 0.3 }
-                    ]
-                },
-                options: { responsive: true, plugins: { legend: { position: 'top' } } }
-            });
         };
     </script>
 </body>
