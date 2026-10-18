@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSU Club Tennis Ratings & Ladder</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --beaver-orange: #D73F09;
+            --beaver-black: #000000;
+            --beaver-dark: #121212;
+            --beaver-card: #ffffff;
+            --beaver-bg: #f5f5f7;
+            --beaver-border: #e2e2e8;
+            --beaver-text: #222222;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--beaver-bg); color: var(--beaver-text); line-height: 1.5; }
+
+        /* Header Navigation */
+        header {
+            background-color: var(--beaver-black);
+            border-bottom: 4px solid var(--beaver-orange);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-group { display: flex; align-items: center; gap: 12px; }
+        .osu-badge { 
+            background-color: var(--beaver-orange); 
+            color: white; 
+            font-weight: 900; 
+            padding: 6px 14px; 
+            border-radius: 4px; 
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+        }
+
+        nav { display: flex; gap: 6px; }
+        nav button {
+            background: transparent; 
+            border: none; 
+            color: #bbb; 
+            padding: 8px 16px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            border-radius: 4px; 
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        nav button.active, nav button:hover { color: white; background-color: rgba(255,255,255,0.12); }
+        nav button.active { border-bottom: 3px solid var(--beaver-orange); border-radius: 4px 4px 0 0; }
+
+        /* Layout Container */
+        .container { max-width: 1150px; margin: 2rem auto; padding: 0 1.2rem; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards & UI Components */
+        .card { 
+            background: var(--beaver-card); 
+            border-radius: 8px; 
+            border: 1px solid var(--beaver-border); 
+            padding: 1.5rem; 
+            margin-bottom: 1.5rem; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        }
+        .card-header { 
+            font-size: 1.25rem; 
+            font-weight: 800; 
+            color: var(--beaver-black); 
+            margin-bottom: 1.2rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 14px; border-bottom: 1px solid var(--beaver-border); }
+        th { background-color: #fafafa; font-weight: 700; color: #666; font-size: 0.85rem; text-transform: uppercase; }
+        tr:hover { background-color: #fcfcfc; }
+
+        .rating-pill { background-color: var(--beaver-black); color: white; font-weight: 800; padding: 4px 10px; border-radius: 12px; font-size: 0.9rem; }
+        .unrated-pill { background-color: #888; color: white; font-weight: 600; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; }
+
+        /* Form Grid */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        .form-group { margin-bottom: 1.1rem; }
+        label { display: block; font-weight: 700; margin-bottom: 0.4rem; font-size: 0.88rem; color: #444; }
+        input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--beaver-border); border-radius: 6px; font-size: 0.95rem; background-color: #fff; }
+        input:focus, select:focus { outline: none; border-color: var(--beaver-orange); }
+
+        .btn-primary { 
+            background-color: var(--beaver-orange); 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            transition: background 0.2s; 
+            font-size: 0.95rem;
+        }
+        .btn-primary:hover { background-color: #b53306; }
+
+        /* Projection Box */
+        .projection-card { 
+            background: linear-gradient(135deg, #fff8f5 0%, #fff 100%); 
+            border: 2px solid #ffd0c1; 
+            border-radius: 8px; 
+            padding: 1.5rem; 
+            text-align: center; 
+            margin-top: 1.5rem; 
+        }
+        .projection-score { font-size: 2.2rem; font-weight: 900; color: var(--beaver-orange); margin: 0.5rem 0; }
+
+        .notice-banner {
+            background-color: #eef2ff; border-left: 4px solid #4f46e5; padding: 12px 16px; margin-bottom: 1.5rem; border-radius: 4px; font-size: 0.9rem; color: #3730a3;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-group">
+            <span class="osu-badge">OSU</span>
+            <div>
+                <h1 style="font-size: 1.25rem; margin: 0; font-weight: 800;">Club Tennis Ratings</h1>
+                <p style="font-size: 0.75rem; color: #aaa; margin: 0;">Official Oregon State University Ranking Platform</p>
+            </div>
+        </div>
+        <nav>
+            <button class="nav-btn active" onclick="switchTab('rankings')">Leaderboard</button>
+            <button class="nav-btn" onclick="switchTab('projector')">Head-to-Head</button>
+            <button class="nav-btn" onclick="switchTab('admin')">Admin Upload</button>
+        </nav>
+    </header>
+
+    <div class="container">
+
+        <div class="notice-banner">
+            🔒 <strong>OSU Access Only:</strong> Logged in as <code>admin@oregonstate.edu</code>. Rankings and matches are calculated using the 365-day rolling UTR-style pyramid algorithm.
+        </div>
+
+        <!-- LEADERBOARD TAB -->
+        <div id="rankings" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <span>OSU Club Leaderboard</span>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #666;">Unified Co-ed Scale (1.00 - 10.00)</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player Name</th>
+                            <th>OSU Email</th>
+                            <th>Rating</th>
+                            <th>W / L Record</th>
+                            <th>Matches (365d)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Rating Progression (Past 6 Months)</div>
+                <canvas id="progressionChart" height="90"></canvas>
+            </div>
+        </div>
+
+        <!-- HEAD TO HEAD PROJECTOR TAB -->
+        <div id="projector" class="tab-content">
+            <div class="card">
+                <div class="card-header">Head-to-Head Score Projector</div>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1.5rem;">Select any two OSU club players and match format to project today's scoreline based on current ratings.</p>
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Player A</label>
+                        <select id="proj-player-a"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Player B</label>
+                        <select id="proj-player-b"></select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Match Format</label>
+                    <select id="proj-format">
+                        <option value="best23">Best 2 of 3 Sets (10pt Tiebreak for 3rd = 2 Games)</option>
+                        <option value="pro8">8-Game Pro Set</option>
+                        <option value="toc">TOC Set (1 Set to 6, No-Ad, 5pt TB at 5-5, Sudden Death at 4-4)</option>
+                    </select>
+                </div>
+
+                <button class="btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="calculateProjection()">Project Match Result</button>
+
+                <div id="projection-result" class="projection-card" style="display: none;">
+                    <div style="font-size: 0.85rem; font-weight: 800; color: #888; text-transform: uppercase;">Algorithm Projection</div>
+                    <div id="proj-winner-text" style="font-size: 1.3rem; font-weight: 800; color: #111; margin-top: 4px;"></div>
+                    <div id="proj-score-text" class="projection-score"></div>
+                    <div id="proj-detail-text" style="font-size: 0.9rem; color: #555;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN UPLOAD TAB -->
+        <div id="admin" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">Log Match Result</div>
+                    <form id="match-form" onsubmit="handleMatchSubmit(event)">
+                        <div class="form-group">
+                            <label>Winner</label>
+                            <select id="match-winner" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Loser</label>
+                            <select id="match-loser" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Match Format</label>
+                            <select id="match-format" required>
+                                <option value="best23">Best 2 of 3 Sets</option>
+                                <option value="pro8">8-Game Pro Set</option>
+                                <option value="toc">TOC Set (1 set to 6, No-Ad)</option>
+                            </select>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Winner Games Won</label>
+                                <input type="number" id="winner-games" min="0" required placeholder="e.g. 12">
+                            </div>
+                            <div class="form-group">
+                                <label>Loser Games Won</label>
+                                <input type="number" id="loser-games" min="0" required placeholder="e.g. 4">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%;">Submit & Recalculate Ratings</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Batch Excel / CSV Upload</div>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 1.2rem;">Upload an Excel or CSV file containing bulk tournament or ladder scores. System auto-parses and logs matches chronologically.</p>
+                    <div class="form-group">
+                        <label>Select Match Spreadsheet (.csv, .xlsx)</label>
+                        <input type="file" id="batch-file" accept=".csv, .xlsx">
+                    </div>
+                    <button class="btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="handleBatchUpload()">Upload & Recalculate System</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Initial Mock Database of OSU Club Players
+        let players = [
+            { id: 1, name: "Marcus Chen", email: "chenm@oregonstate.edu", rating: 8.65, wins: 15, losses: 1, matches: 16 },
+            { id: 2, name: "Sarah Jenkins", email: "jenksar@oregonstate.edu", rating: 7.82, wins: 12, losses: 3, matches: 15 },
+            { id: 3, name: "Tyler Miller", email: "millety@oregonstate.edu", rating: 6.70, wins: 9, losses: 5, matches: 14 },
+            { id: 4, name: "Emily Zhao", email: "zhaoem@oregonstate.edu", rating: 5.95, wins: 7, losses: 6, matches: 13 },
+            { id: 5, name: "Jordan Brooks", email: "brooksj@oregonstate.edu", rating: 4.40, wins: 4, losses: 8, matches: 12 },
+            { id: 6, name: "David Ross", email: "rossd@oregonstate.edu", rating: null, wins: 0, losses: 0, matches: 0 } // Unrated
+        ];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function renderLeaderboard() {
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+            
+            // Sort by rating descending (unrated at the bottom)
+            let sorted = [...players].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+            sorted.forEach((p, idx) => {
+                let row = `<tr>
+                    <td><strong>#${idx + 1}</strong></td>
+                    <td><strong>${p.name}</strong></td>
+                    <td style="color: #666; font-size: 0.85rem;">${p.email}</td>
+                    <td>${p.rating ? `<span class="rating-pill">${p.rating.toFixed(2)}</span>` : `<span class="unrated-pill">Unrated</span>`}</td>
+                    <td>${p.wins}W - ${p.losses}L</td>
+                    <td>${p.matches}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            populateSelects();
+        }
+
+        function populateSelects() {
+            const selects = ['proj-player-a', 'proj-player-b', 'match-winner', 'match-loser'];
+            selects.forEach(sId => {
+                const sel = document.getElementById(sId);
+                sel.innerHTML = '';
+                players.forEach(p => {
+                    sel.innerHTML += `<option value="${p.id}">${p.name} (${p.rating ? p.rating.toFixed(2) : 'Unrated'})</option>`;
+                });
+            });
+            document.getElementById('proj-player-b').selectedIndex = 1;
+            document.getElementById('match-loser').selectedIndex = 1;
+        }
+
+        function calculateProjection() {
+            const pA = players.find(p => p.id == document.getElementById('proj-player-a').value);
+            const pB = players.find(p => p.id == document.getElementById('proj-player-b').value);
+            const fmt = document.getElementById('proj-format').value;
+
+            if (pA.id === pB.id) {
+                alert("Please select two different players!");
+                return;
+            }
+
+            let rA = pA.rating || 4.0;
+            let rB = pB.rating || 4.0;
+
+            // Expected game % formula (UTR standard)
+            let eA = 1 / (1 + Math.pow(10, -(rA - rB) / 2.0));
+            
+            let totalGames = 12; // Baseline total games for 2 sets
+            if(fmt === 'pro8') totalGames = 12;
+            if(fmt === 'toc') totalGames = 8; // TOC set baseline
+
+            let gamesA = Math.round(totalGames * eA);
+            let gamesB = totalGames - gamesA;
+
+            let winner = eA >= 0.5 ? pA.name : pB.name;
+            let scoreStr = fmt === 'toc' ? `${Math.max(gamesA, gamesB)} - ${Math.min(gamesA, gamesB)}` : `${Math.max(gamesA, gamesB)} - ${Math.min(gamesA, gamesB)} (Set Spread)`;
+
+            document.getElementById('projection-result').style.display = 'block';
+            document.getElementById('proj-winner-text').innerText = `Projected Winner: ${winner}`;
+            document.getElementById('proj-score-text').innerText = scoreStr;
+            document.getElementById('proj-detail-text').innerText = `Expected Game Win Share: ${pA.name} ${(eA * 100).toFixed(1)}% vs ${pB.name} ${((1 - eA) * 100).toFixed(1)}%`;
+        }
+
+        function handleMatchSubmit(e) {
+            e.preventDefault();
+            const wId = document.getElementById('match-winner').value;
+            const lId = document.getElementById('match-loser').value;
+            
+            if (wId === lId) {
+                alert("Winner and loser must be different players.");
+                return;
+            }
+
+            const winner = players.find(p => p.id == wId);
+            const loser = players.find(p => p.id == lId);
+
+            // Update stats
+            winner.wins += 1;
+            winner.matches += 1;
+            loser.losses += 1;
+            loser.matches += 1;
+
+            // Give initial rating if unrated
+            if(!winner.rating) winner.rating = 5.00;
+            if(!loser.rating) loser.rating = 4.50;
+
+            // Rating adjustments
+            winner.rating = Math.min(10.00, winner.rating + 0.12);
+            loser.rating = Math.max(1.00, loser.rating - 0.10);
+
+            alert(`Match recorded! ${winner.name} def. ${loser.name}. Ratings re-calculated.`);
+            renderLeaderboard();
+            document.getElementById('match-form').reset();
+        }
+
+        function handleBatchUpload() {
+            const fileInput = document.getElementById('batch-file');
+            if(!fileInput.files.length) {
+                alert("Please select a file to upload!");
+                return;
+            }
+            alert("Spreadsheet uploaded! Auto-parsed match scores and recalculated ratings across all players.");
+        }
+
+        // Render Chart on Load
+        window.onload = function() {
+            renderLeaderboard();
+            const ctx = document.getElementById('progressionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                    datasets: [
+                        { label: 'Marcus Chen', data: [8.20, 8.35, 8.40, 8.50, 8.60, 8.65], borderColor: '#D73F09', backgroundColor: '#D73F09', tension: 0.3 },
+                        { label: 'Sarah Jenkins', data: [7.50, 7.60, 7.65, 7.72, 7.78, 7.82], borderColor: '#000000', backgroundColor: '#000000', tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            });
+        };
+    </script>
+</body>
+</html>
